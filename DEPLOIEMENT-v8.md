@@ -1,22 +1,29 @@
 # ELEV8 DEAL AGENT v8 — Guide de déploiement
 
-## Fichiers à placer dans ton projet Next.js
+## Structure minimale si tu déploies ce dossier directement sur Vercel
 
 ```
-src/
-  app/
-    api/
-      validate-code/
-        route.js          ← api-validate-code.js
-      submit-deal/
-        route.js          ← api-submit-deal.js
-      analyze/
-        route.js          ← déjà présent depuis v5
-      search/
-        route.js          ← déjà présent depuis v5
-  components/
-    DealAgent.jsx         ← deal-agent-v8.jsx
+app/
+  layout.js
+  page.js
+  api/
+    validate-code/
+      route.js
+    submit-deal/
+      route.js
+    analyze/
+      route.js
+    search/
+      route.js
+package.json
+deal-agent-v8.jsx
+api-validate-code.js
+api-submit-deal.js
+api-analyze.js
+api-search.js
 ```
+
+`app/page.js` is required. Without it, Vercel deploys successfully but returns `404 NOT_FOUND` at `/`.
 
 ## Variables d'environnement à ajouter dans Vercel
 
