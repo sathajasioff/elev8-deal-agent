@@ -22,7 +22,7 @@ export async function POST(request) {
     const zapierWebhookUrl = process.env.ZAPIER_DEAL_WEBHOOK_URL;
 
     if (zapierWebhookUrl) {
-      await fetch(zapierWebhookUrl, {
+      const webhookResp = await fetch(zapierWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -34,6 +34,12 @@ export async function POST(request) {
           source: "Elev8 Deal Agent v8",
         }),
       });
+
+      if (!webhookResp.ok) {
+        return Response.json({ error: "Webhook Zapier en erreur" }, { status: 502 });
+      }
+    } else {
+      return Response.json({ error: "ZAPIER_DEAL_WEBHOOK_URL manquant" }, { status: 500 });
     }
 
     // --- FALLBACK: Log to console (for local development) ---

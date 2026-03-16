@@ -198,13 +198,18 @@ const store={
 
 // ─── COMPONENTS ──────────────────────────────────────────────────────────────
 
-// Access Gate — codes validated client-side for artifact, server-side in Next.js version
-const VALID_CODES=["ELEV8","BATISSEUR","DEALAGENT","SERUJAN2025","PLEX2025"];
 function AccessGate({onUnlock}){
-  const[code,setCode]=useState("");const[err,setErr]=useState(false);const[shake,setShake]=useState(false);
-  const attempt=()=>{
-    if(VALID_CODES.includes(code.toUpperCase().trim())){store.set("ea_access","1");onUnlock();}
-    else{setErr(true);setShake(true);setTimeout(()=>setShake(false),400);}
+  const[code,setCode]=useState("");const[err,setErr]=useState(false);const[shake,setShake]=useState(false);const[loading,setLoading]=useState(false);
+  const attempt=async()=>{
+    const trimmed=code.toUpperCase().trim();
+    if(!trimmed||loading)return;
+    setLoading(true);
+    try{
+      const resp=await fetch("/api/validate-code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:trimmed})});
+      const data=await resp.json().catch(()=>({valid:false}));
+      if(resp.ok&&data.valid){store.set("ea_access","1");onUnlock();return;}
+    }catch{}
+    setErr(true);setShake(true);setTimeout(()=>setShake(false),400);setLoading(false);
   };
   return(
     <div style={{minHeight:"100vh",background:"#06060F",display:"flex",alignItems:"center",justifyContent:"center",padding:20,fontFamily:"'DM Sans',system-ui,sans-serif"}}>
@@ -215,7 +220,7 @@ function AccessGate({onUnlock}){
         <div style={{transform:shake?"translateX(-5px)":"none",transition:"transform .1s"}}>
           <input value={code} onChange={e=>{setCode(e.target.value);setErr(false);}} onKeyDown={e=>e.key==="Enter"&&attempt()} placeholder="Code d'accès" style={{width:"100%",background:"#0C0C1A",border:`1.5px solid ${err?"#EF4444":"#1E1E35"}`,color:"#D0D0F0",borderRadius:12,padding:"14px 16px",fontSize:16,outline:"none",marginBottom:10,textAlign:"center",letterSpacing:"0.15em",textTransform:"uppercase",fontFamily:"inherit"}}/>
           {err&&<div style={{fontSize:12,color:"#EF4444",marginBottom:10}}>Code invalide — contacte ton formateur.</div>}
-          <button onClick={attempt} style={{width:"100%",background:"#6366F1",color:"white",border:"none",borderRadius:12,padding:"14px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>ACCÉDER</button>
+          <button onClick={attempt} disabled={loading||!code.trim()} style={{width:"100%",background:loading||!code.trim()?"#14141E":"#6366F1",color:loading||!code.trim()?"#2A2A55":"white",border:"none",borderRadius:12,padding:"14px",fontSize:14,fontWeight:800,cursor:loading||!code.trim()?"not-allowed":"pointer",fontFamily:"inherit"}}>{loading?"VALIDATION...":"ACCÉDER"}</button>
         </div>
         <div style={{marginTop:24,fontSize:12,color:"#22224A"}}>Pas encore étudiant? <a href="https://elev8.ca" target="_blank" rel="noreferrer" style={{color:"#6366F1",textDecoration:"none"}}>elev8.ca →</a></div>
       </div>
@@ -436,14 +441,19 @@ function RenoSimulator({result,form,rents}){
 
 // ─── DEAL SUBMISSION ──────────────────────────────────────────────────────────
 function DealSubmission({result,form,onClose}){
-  const[name,setName]=useState("");const[phone,setPhone]=useState("");const[notes,setNotes]=useState("");const[sent,setSent]=useState(false);const[sending,setSending]=useState(false);
+  const[name,setName]=useState("");const[phone,setPhone]=useState("");const[notes,setNotes]=useState("");const[sent,setSent]=useState(false);const[sending,setSending]=useState(false);const[error,setError]=useState(null);
   const submit=async()=>{
+    if(!name||!phone||sending)return;
     setSending(true);
+    setError(null);
     const body=`NOUVEAU DEAL — Elev8 Deal Agent\n\nNom: ${name}\nTéléphone: ${phone}\n\nDEAL:\n${form.propertyType} · ${form.city}\nPrix demandé: ${fmt(result.price)}\nNOI: ${fmt(result.currentNOI)}/an\nCashflow: ${fmt(result.monthlyCashflow)}/mois\nCap rate: ${result.currentCapRate?.toFixed(2)||"N/A"}%\nScore: ${result.score}/10\nVerdict: ${result.verdict.label}\n\nNotes:\n${notes}`;
     try{
-      await fetch("/api/submit-deal",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,phone,notes,dealSummary:body})});
-    }catch{}
-    setSent(true);setSending(false);
+      const resp=await fetch("/api/submit-deal",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,phone,notes,dealSummary:body})});
+      const data=await resp.json().catch(()=>({}));
+      if(!resp.ok||!data.success)throw new Error(data.error||"Échec de la soumission");
+      setSent(true);
+    }catch(e){setError(e.message||"Échec de la soumission");}
+    setSending(false);
   };
   if(sent)return(
     <div style={{background:"#081812",border:"1px solid #10B98130",borderRadius:14,padding:"24px",textAlign:"center"}}>
@@ -474,6 +484,7 @@ function DealSubmission({result,form,onClose}){
         <div style={{fontSize:11,color:"#44446A",marginBottom:5}}>Notes ou questions (optionnel)</div>
         <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Ex: J'ai visité la propriété, les locataires sont en place..." rows={3} style={{background:"#0C0C1A",border:"1px solid #1E1E35",color:"#D0D0F0",borderRadius:8,padding:"9px 12px",fontSize:13,width:"100%",outline:"none",fontFamily:"inherit",resize:"vertical"}}/>
       </div>
+      {error&&<div style={{fontSize:12,color:"#EF4444",marginBottom:10}}>{error}</div>}
       <button onClick={submit} disabled={!name||!phone||sending} style={{width:"100%",background:(!name||!phone)?"#14141E":"#6366F1",color:(!name||!phone)?"#2A2A55":"white",border:"none",borderRadius:10,padding:"13px",fontSize:14,fontWeight:800,cursor:(!name||!phone)?"not-allowed":"pointer",fontFamily:"inherit"}}>
         {sending?<span style={{animation:"pulse 1.4s infinite"}}>Envoi en cours...</span>:"ENVOYER À SERUJAN →"}
       </button>
@@ -490,11 +501,11 @@ function AddressSearch({onDataFound}){
     if(!address.trim())return;setStatus("searching");setLog([]);setFound(null);
     addLog(`Recherche: "${address}"`,"start");addLog("Centris · Registre foncier · JLR...","info");
     try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,tools:[{type:"web_search_20250305",name:"web_search"}],messages:[{role:"user",content:`Recherche immobilière Québec pour: "${address}". JSON uniquement:\n{"found":true,"address":"","city":"montreal|laval|longueuil|quebec|sherbrooke|gatineau|saint-jerome|granby|brossard|saint-hyacinthe|other","propertyType":"duplex|triplex|quadruplex","askingPrice":0,"municipalEval":0,"yearBuilt":0,"units":[{"type":"4.5","currentRent":0}],"recentSales":[{"date":"","price":0,"description":""}],"confidence":"high|medium|low","notes":"","sources":[]}`}]})});
+      const resp=await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({address})});
+      if(!resp.ok)throw new Error("Recherche indisponible");
       const data=await resp.json();
-      (data.content||[]).filter(b=>b.type==="tool_use").forEach(t=>addLog(`⌕ ${t.input?.query||""}`,"search"));
-      const txt=(data.content||[]).find(b=>b.type==="text")?.text||"";
-      let parsed=null;try{const m=txt.match(/\{[\s\S]*\}/);if(m)parsed=JSON.parse(m[0]);}catch{}
+      (data.logs||[]).forEach(msg=>addLog(msg,"search"));
+      const parsed=data.result||null;
       if(parsed){addLog(`Confiance: ${parsed.confidence||"medium"}`,"success");setFound(parsed);setStatus("found");}
       else{addLog("Données partielles — remplissage manuel requis","warn");setStatus("error");}
     }catch(e){addLog(`Erreur: ${e.message}`,"error");setStatus("error");}
@@ -602,7 +613,7 @@ export default function DealAgent(){
       const count=(store.get("ea_count",0)+1);store.set("ea_count",count);
       if(count%3===0||r.score>=6)setShowCTA(true);
       const prompt=`Analyste immobilier senior Québec.${form.addressNotes?` Propriété: ${form.addressNotes}`:""}\n${form.propertyType}·${form.city}·${r.numUnits} logements\nPrix:${fmt(r.price)}|Cap:${r.currentCapRate?.toFixed(2)||"N/A"}%|NOI:${fmt(r.currentNOI)}\nCF:${r.monthlyCashflow!==null?fmt(r.monthlyCashflow):""}/mois|DSCR:${r.dscr!==null?fmtN(r.dscr):"N/A"}|IRR:${r.irr?r.irr.toFixed(1)+"%":"N/A"}\nUpside:${fmt(r.rentUpside)}/an|CoC:${r.cashOnCash?.toFixed(1)||"N/A"}%\nScore:${r.score}/10|${r.verdict.label}\n\n4 points directs:\n1.[DEAL]\n2.[UPSIDE]\n3.[RISQUE]\n4.[ACTION]\nFrancophone direct.`;
-      try{const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:700,messages:[{role:"user",content:prompt}]})});const data=await resp.json();setAiInsight(data.content?.find(b=>b.type==="text")?.text||null);}catch{}
+      try{const resp=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt})});if(resp.ok){const data=await resp.json();setAiInsight(data.insight||null);}}catch{}
     }catch(e){setError(e.message||"Erreur");}
     setLoading(false);
   };

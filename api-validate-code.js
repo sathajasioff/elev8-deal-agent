@@ -1,14 +1,22 @@
 // src/app/api/validate-code/route.js
 // Server-side access code validation — codes never exposed to browser
 
-const VALID_CODES = [
+const DEFAULT_CODES = [
   "ELEV8",
   "BATISSEUR",
   "DEALAGENT",
   "SERUJAN2025",
   "PLEX2025",
-  // Add student-specific codes here
 ];
+
+function getValidCodes() {
+  const envCodes = process.env.ELEV8_ACCESS_CODES;
+  if (!envCodes) return DEFAULT_CODES;
+  return envCodes
+    .split(",")
+    .map((code) => code.trim().toUpperCase())
+    .filter(Boolean);
+}
 
 export async function POST(request) {
   try {
@@ -18,7 +26,7 @@ export async function POST(request) {
       return Response.json({ valid: false }, { status: 400 });
     }
 
-    const valid = VALID_CODES.includes(code.toUpperCase().trim());
+    const valid = getValidCodes().includes(code.toUpperCase().trim());
 
     // Add rate limiting here in production
     // e.g. track failed attempts by IP

@@ -20,9 +20,10 @@ src/
 
 ## Variables d'environnement à ajouter dans Vercel
 
-```
+``` 
 ANTHROPIC_API_KEY=sk-ant-...          (déjà configuré)
 ZAPIER_DEAL_WEBHOOK_URL=https://...   (nouveau — voir ci-dessous)
+ELEV8_ACCESS_CODES=ELEV8,BATISSEUR    (optionnel — remplace les codes par défaut)
 ```
 
 ## Configurer la soumission de deals (Zapier)
@@ -40,10 +41,12 @@ ZAPIER_DEAL_WEBHOOK_URL=https://...   (nouveau — voir ci-dessous)
 
 ## Gérer les codes d'accès étudiants
 
-Édite le fichier `src/app/api/validate-code/route.js`:
+Option 1: configure `ELEV8_ACCESS_CODES` dans Vercel avec une liste séparée par des virgules.
+
+Option 2: édite le fichier `src/app/api/validate-code/route.js`:
 
 ```javascript
-const VALID_CODES = [
+const DEFAULT_CODES = [
   "ELEV8",           // Code général
   "BATISSEUR",       // Étudiants Bâtisseur N1
   "DEALAGENT",       // Code de test
@@ -53,7 +56,7 @@ const VALID_CODES = [
 ];
 ```
 
-Les codes ne sont jamais exposés dans le navigateur — ils sont validés côté serveur uniquement.
+Les codes ne sont jamais exposés dans le navigateur — ils sont validés côté serveur uniquement via `/api/validate-code`.
 
 ## Nouvelles fonctionnalités v8
 
@@ -63,6 +66,7 @@ Les codes ne sont jamais exposés dans le navigateur — ils sont validés côt�
 4. Simulateur de rénovation — modélise les coûts et gains
 5. Soumission de deal — leads qualifiés directement vers toi
 6. Codes d'accès sécurisés côté serveur
+7. Recherche d'adresse et insight IA exécutés côté serveur
 
 ## Push et déploiement
 
