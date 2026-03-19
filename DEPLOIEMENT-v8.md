@@ -33,6 +33,15 @@ ZAPIER_DEAL_WEBHOOK_URL=https://...   (nouveau — voir ci-dessous)
 ELEV8_ACCESS_CODES=ELEV8,BATISSEUR    (optionnel — remplace les codes par défaut)
 ```
 
+## Réglages Vercel obligatoires
+
+- Framework Preset: `Next.js`
+- Root Directory: laisse le dossier de cette app uniquement
+- Build Command: vide ou `next build`
+- Output Directory: vide
+
+Ne mets pas `public` comme Output Directory. Ce projet n'est pas un site statique exporté; Next.js génère et sert `.next` automatiquement sur Vercel.
+
 ## Configurer la soumission de deals (Zapier)
 
 1. Va sur zapier.com → Create Zap

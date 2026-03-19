@@ -502,8 +502,8 @@ function AddressSearch({onDataFound}){
     addLog(`Recherche: "${address}"`,"start");addLog("Centris · Registre foncier · JLR...","info");
     try{
       const resp=await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({address})});
-      if(!resp.ok)throw new Error("Recherche indisponible");
-      const data=await resp.json();
+      const data=await resp.json().catch(()=>({}));
+      if(!resp.ok)throw new Error(data.error||`Recherche indisponible (${resp.status})`);
       (data.logs||[]).forEach(msg=>addLog(msg,"search"));
       const parsed=data.result||null;
       if(parsed){addLog(`Confiance: ${parsed.confidence||"medium"}`,"success");setFound(parsed);setStatus("found");}

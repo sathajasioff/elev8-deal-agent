@@ -38,9 +38,25 @@ export async function POST(request) {
       }),
     });
 
-    const data = await resp.json();
+    const raw = await resp.text();
+    let data = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      data = { raw };
+    }
+
     if (!resp.ok) {
-      return Response.json({ error: data.error?.message || "Erreur Anthropic" }, { status: resp.status });
+      return Response.json(
+        {
+          error:
+            data.error?.message ||
+            data.message ||
+            data.raw ||
+            `Erreur Anthropic (${resp.status})`,
+        },
+        { status: resp.status }
+      );
     }
 
     const logs = (data.content || [])
